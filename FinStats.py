@@ -1,43 +1,40 @@
 import pandas as pd
 from statsmodels.formula.api import ols
 
-# --- 1. READ & CLEAN PRICES ---
-
 df_raw = pd.read_excel("data_coursework1_Q1.xls")
 
-# We use:
-#   SP500  -> market price/index level
-#   IBM    -> stock price
-#   1-month Tbill -> risk-free rate (in % per month)
+
+# SP500: market price/index level
+# IBM: stock price
+# 1-m Tbill: risk-free rate (in % per month)
 prices = df_raw[["SP500", "IBM", "1-month Tbill"]].copy()
 
-# Make them numeric and drop non-numeric header rows like "adjusted/closed/price"
+# Make them numeric and drop non-numeric header rows (adjusted/closed/price)
 for col in ["SP500", "IBM", "1-month Tbill"]:
     prices[col] = pd.to_numeric(prices[col], errors="coerce")
 
 prices = prices.dropna(subset=["SP500", "IBM", "1-month Tbill"]).reset_index(drop=True)
 
-# --- 2. BUILD RETURNS ---
-
+# returns
 # Simple monthly returns from prices
-prices["r_M"] = prices["SP500"].pct_change()      # market return
-prices["r_i"] = prices["IBM"].pct_change()        # stock return
+prices["r_M"] = prices["SP500"].pct_change()      # market
+prices["r_i"] = prices["IBM"].pct_change()        # stock
 
-# Convert T-bill rate from percent to decimal monthly rate (0.33 -> 0.0033)
+# convert T-bill rate % to decimal monthly rate
 prices["r_f"] = prices["1-month Tbill"] / 100.0
 
-# Drop first row (where pct_change is NaN) and any remaining NaNs
+# Drop first row and any NaNs
 df = prices.dropna(subset=["r_i", "r_M", "r_f"]).reset_index(drop=True)
 
 print("First 5 rows of returns:")
 print(df[["r_i", "r_M", "r_f"]].head(), "\n")
 
-# --- 3. EXCESS RETURNS & MODEL 2 REGRESSORS ---
+# excess returns & 2 regressors
 
 df["Excess_Return_i"] = df["r_i"] - df["r_f"]
 df["Excess_Return_M"] = df["r_M"] - df["r_f"]
 
-# Indicator for up vs down markets based on **market excess return**
+# Indicator for up vs down markets based on market excess return
 D_t = (df["Excess_Return_M"] > 0).astype(int)
 df["X1_Up_Market"] = D_t * df["Excess_Return_M"]          # β1
 df["X2_Down_Market"] = (1 - D_t) * df["Excess_Return_M"]  # β2
@@ -47,8 +44,7 @@ print("Preview of regression data:")
 print(df[["Excess_Return_i", "Excess_Return_M",
           "X1_Up_Market", "X2_Down_Market", "X3_Squared"]].head(), "\n")
 
-# --- 4. REGRESSION ANALYSIS ---
-
+# regression analysis
 print("\n=== Model (1): Standard CAPM (OLS) ===")
 capm_model = ols("Excess_Return_i ~ Excess_Return_M", data=df).fit()
 print(capm_model.summary())
@@ -60,8 +56,7 @@ extended_model = ols(
 ).fit()
 print(extended_model.summary())
 
-# --- 5. HYPOTHESIS TESTS ---
-
+# hyphotesis test
 # F-Test: H0: β1 = β2
 print("\n=== F-Test for H_0: beta_1 = beta_2 ===")
 f_test_result = extended_model.f_test("X1_Up_Market = X2_Down_Market")
@@ -76,7 +71,7 @@ if F_pval < 0.05:
 else:
     print("Decision: Fail to reject H_0. No significant difference in betas.")
 
-# t-Test: H0: α = 0 in Model (1)
+# t-test: H0: α = 0 in Model (1)
 print("\n=== t-Test for H_0: alpha = 0 (Model 1) ===")
 t_stat = capm_model.tvalues["Intercept"]
 p_val = capm_model.pvalues["Intercept"]
