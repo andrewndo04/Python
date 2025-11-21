@@ -47,18 +47,19 @@ print(df[["Excess_Return_IBM", "Excess_Return_M",
 
 # regression analysis
 print("\n Model 1: Standard CAPM (OLS)")
+# dependent v = Ri,t     independent v = RM,t
 capm_model = ols("Excess_Return_IBM ~ Excess_Return_M", data=df).fit()
 print(capm_model.summary())
 
 print("\n Model 2: Extended Asymmetric Model (OLS)")
+# 3 variables β (1,2,3)
 extended_model = ols(
     "Excess_Return_IBM ~ X1_Up_M + X2_Down_M + X3_Squared",
-    data=df
-).fit()
+    data=df).fit()
 print(extended_model.summary())
 
 # hyphotesis test
-# F-Test: H0: β1 = β2
+# F-Test: H0: β1 = β2 in model 2
 print("\n F-Test for H_0: beta_1 = beta_2")
 f_test_result = extended_model.f_test("X1_Up_M = X2_Down_M")
 F_stat = float(f_test_result.fvalue)
@@ -68,12 +69,12 @@ print(f"F-statistic: {F_stat:.4f}")
 print(f"P-value: {F_pval:.4f}")
 
 if F_pval < 0.05:
-    print("Decision: Reject H_0. Up and down market betas differ significantly.")
+    print("Decision: Reject H_0. Up and down market betas significantly different from each other.")
 else:
     print("Decision: Fail to reject H_0. No significant difference in betas.")
 
-# t-test: H0: α = 0 in Model (1)
-print("\n t-Test for H_0: alpha = 0 (Model 1)")
+# t-test: H0: α = 0 in model 1
+print("\n t-Test for H_0: alpha = 0")
 t_stat = capm_model.tvalues["Intercept"]
 p_val = capm_model.pvalues["Intercept"]
 
