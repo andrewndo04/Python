@@ -3,25 +3,25 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import numpy as np
 
+# read the excel data
 df_raw = pd.read_excel("data_coursework1_Q1.xls")
 
 # SP500: market price/index level
 # IBM: stock price
-# 1-m Tbill: risk-free rate (in % per month)
+# 1-m Tbill: risk-free rate (given data is multiplied by 100 and in month)
 prices = df_raw[["SP500", "IBM", "1-month Tbill"]].copy()
 
-# numeric and drop non-numeric header rows (adjusted/closed/price)
+# numeric and drop non-numeric header rows
 for col in ["SP500", "IBM", "1-month Tbill"]:
     prices[col] = pd.to_numeric(prices[col], errors="coerce")   # drop non-numeric into NaN
 
 prices = prices.dropna(subset=["SP500", "IBM", "1-month Tbill"]).reset_index(drop=True)
 
-# Simple monthly returns from prices
+# simple monthly returns
 prices["r_M"] = prices["SP500"].pct_change()      # market
 prices["r_IBM"] = prices["IBM"].pct_change()      # stock
 
 # T-bill given is multiplied by 100 and not expressed in yearly basis
-# convert T-bill to decimal monthly rate
 prices["r_f"] = prices["1-month Tbill"] / 100.0
 
 # Drop first row and any NaNs
@@ -35,7 +35,7 @@ print(df[["r_IBM", "r_M", "r_f"]].head(), "\n")
 df["Excess_Return_IBM"] = df["r_IBM"] - df["r_f"]
 df["Excess_Return_M"] = df["r_M"] - df["r_f"]
 
-# Indicator for up vs down markets based on market excess return
+# indicator for up vs down markets based on market excess return
 D_t = (df["Excess_Return_M"] > 0).astype(int)
 df["X1_Up_M"] = D_t * df["Excess_Return_M"]          # β1
 df["X2_Down_M"] = (1 - D_t) * df["Excess_Return_M"]  # β2
@@ -48,8 +48,8 @@ print(df[["Excess_Return_IBM", "Excess_Return_M",
 # regression analysis
 print("\n Model 1: Standard CAPM (OLS)")
 # dependent v = Ri,t     independent v = RM,t
-capm_model = ols("Excess_Return_IBM ~ Excess_Return_M", data=df).fit()
-print(capm_model.summary())
+capm = ols("Excess_Return_IBM ~ Excess_Return_M", data=df).fit()
+print(capm.summary())
 
 print("\n Model 2: Extended Asymmetric Model (OLS)")
 # 3 variables β (1,2,3)
@@ -75,8 +75,8 @@ else:
 
 # t-test: H0: α = 0 in model 1
 print("\n t-Test for H_0: alpha = 0")
-t_stat = capm_model.tvalues["Intercept"]
-p_val = capm_model.pvalues["Intercept"]
+t_stat = capm.tvalues["Intercept"]
+p_val = capm.pvalues["Intercept"]
 
 print(f"t-statistic (alpha=0): {t_stat:.4f}")
 print(f"P-value (alpha=0): {p_val:.4f}")
